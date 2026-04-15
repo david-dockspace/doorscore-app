@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import type { PropertyListScreenProps } from '../navigation/types';
 import { usePropertyStore } from '../store/propertyStore';
@@ -54,18 +55,33 @@ export default function PropertyListScreen({ navigation }: PropertyListScreenPro
     return new Date(b.dateViewed).getTime() - new Date(a.dateViewed).getTime();
   });
 
+  const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
+
   function confirmDelete(property: Property) {
     Alert.alert(
       'Delete Property',
       `Remove "${property.address}"? This cannot be undone.`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => swipeableRefs.current.get(property.id)?.close(),
+        },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => deleteProperty(property.id),
         },
       ]
+    );
+  }
+
+  function renderDeleteAction(property: Property) {
+    return (
+      <TouchableOpacity style={styles.deleteAction} onPress={() => confirmDelete(property)}>
+        <Ionicons name="trash" size={22} color="#fff" />
+        <Text style={styles.deleteActionText}>Delete</Text>
+      </TouchableOpacity>
     );
   }
 
@@ -121,16 +137,19 @@ export default function PropertyListScreen({ navigation }: PropertyListScreenPro
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onLongPress={() => confirmDelete(item)}
-            delayLongPress={600}
-            activeOpacity={1}
+          <Swipeable
+            ref={(ref) => {
+              if (ref) swipeableRefs.current.set(item.id, ref);
+              else swipeableRefs.current.delete(item.id);
+            }}
+            renderRightActions={() => renderDeleteAction(item)}
+            overshootRight={false}
           >
             <PropertyCard
               property={item}
               onPress={() => navigation.navigate('PropertyDetail', { id: item.id })}
             />
-          </TouchableOpacity>
+          </Swipeable>
         )}
       />
 
@@ -232,6 +251,21 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  deleteAction: {
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    marginVertical: 4,
+    borderRadius: 12,
+    marginRight: 12,
+    gap: 4,
+  },
+  deleteActionText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   fab: {
     position: 'absolute',

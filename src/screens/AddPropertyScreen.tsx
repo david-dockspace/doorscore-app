@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import type { AddPropertyScreenProps } from '../navigation/types';
 import { usePropertyStore } from '../store/propertyStore';
@@ -60,6 +61,7 @@ export default function AddPropertyScreen({ navigation }: AddPropertyScreenProps
   const [agentName, setAgentName] = useState('');
   const [agentPhone, setAgentPhone] = useState('');
   const [mlsNumber, setMlsNumber] = useState('');
+  const [ogImageUrl, setOgImageUrl] = useState<string | undefined>();
   const [pendingPhotos, setPendingPhotos] = useState<{ id: string; uri: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -74,6 +76,7 @@ export default function AddPropertyScreen({ navigation }: AddPropertyScreenProps
       if (data.bedrooms) setBedrooms(String(data.bedrooms));
       if (data.bathrooms) setBathrooms(String(data.bathrooms));
       if (data.sqft) setSqft(String(data.sqft));
+      if (data.imageUrl) setOgImageUrl(data.imageUrl);
     } catch {
       Alert.alert('Auto-fill failed', 'Could not parse listing URL. Fill in manually.');
     } finally {
@@ -155,6 +158,18 @@ export default function AddPropertyScreen({ navigation }: AddPropertyScreenProps
         mlsNumber: mlsNumber.trim() || undefined,
       });
 
+      // Attach OG image from listing URL (downloaded first)
+      if (ogImageUrl) {
+        try {
+          const ext = ogImageUrl.split('?')[0].endsWith('.png') ? '.png' : '.jpg';
+          const tmpUri = `${FileSystem.cacheDirectory}og_thumb_${Date.now()}${ext}`;
+          const { uri: localUri } = await FileSystem.downloadAsync(ogImageUrl, tmpUri);
+          await addPhoto(propertyId, localUri);
+        } catch (e) {
+          console.warn('[AddProperty] OG image download failed:', e);
+        }
+      }
+
       // Attach pending photos
       for (const p of pendingPhotos) {
         await addPhoto(propertyId, p.uri);
@@ -180,10 +195,12 @@ export default function AddPropertyScreen({ navigation }: AddPropertyScreenProps
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {/* ── URL Auto-fill ─────────────────────────────── */}

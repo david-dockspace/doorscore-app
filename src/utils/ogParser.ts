@@ -26,7 +26,7 @@ function decodeHtmlEntities(str: string): string {
 }
 
 function parsePrice(text: string): number | undefined {
-  const match = text.match(/\$?([\d,]+)/);
+  const match = text.match(/\$([\d,]+)/);
   if (!match) return undefined;
   const val = parseInt(match[1].replace(/,/g, ''), 10);
   return isNaN(val) ? undefined : val;
