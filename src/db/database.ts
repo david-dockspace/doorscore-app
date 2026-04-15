@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import type { Property, LocalPhoto } from '../types';
+import type { Property, LocalPhoto, ChecklistItem } from '../types';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -44,7 +44,23 @@ export function initializeDatabase(): void {
       taken_at TEXT NOT NULL,
       FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS checklist_items (
+      id TEXT PRIMARY KEY NOT NULL,
+      property_id TEXT NOT NULL,
+      category TEXT NOT NULL,
+      label TEXT NOT NULL,
+      score INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+    );
   `);
+
+  // Migration: replace checked column with score if needed
+  try {
+    database.execSync('ALTER TABLE checklist_items ADD COLUMN score INTEGER NOT NULL DEFAULT 0');
+  } catch {
+    // Column already exists — no-op
+  }
 }
 
 // ─── Row types (SQLite snake_case) ───────────────────────────────────────────
@@ -227,4 +243,52 @@ export function dbInsertPhoto(photo: LocalPhoto): void {
 export function dbDeletePhoto(id: string): void {
   const database = getDb();
   database.runSync('DELETE FROM photos WHERE id = ?', id);
+}
+
+// ─── Checklist ────────────────────────────────────────────────────────────────
+
+interface ChecklistRow {
+  id: string;
+  property_id: string;
+  category: string;
+  label: string;
+  score: number;
+}
+
+function rowToChecklistItem(row: ChecklistRow): ChecklistItem {
+  return {
+    id: row.id,
+    propertyId: row.property_id,
+    category: row.category,
+    label: row.label,
+    score: (row.score ?? 0) as 0 | 1 | 2 | 3,
+  };
+}
+
+export function dbGetChecklistItems(propertyId: string): ChecklistItem[] {
+  const database = getDb();
+  const rows = database.getAllSync<ChecklistRow>(
+    'SELECT * FROM checklist_items WHERE property_id = ? ORDER BY category, label',
+    propertyId
+  );
+  return rows.map(rowToChecklistItem);
+}
+
+export function dbInsertChecklistItems(items: ChecklistItem[]): void {
+  const database = getDb();
+  for (const item of items) {
+    database.runSync(
+      'INSERT INTO checklist_items (id, property_id, category, label, score) VALUES (?, ?, ?, ?, ?)',
+      item.id,
+      item.propertyId,
+      item.category,
+      item.label,
+      item.score
+    );
+  }
+}
+
+export function dbSetChecklistScore(id: string, score: number): void {
+  const database = getDb();
+  database.runSync('UPDATE checklist_items SET score = ? WHERE id = ?', score, id);
 }

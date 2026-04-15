@@ -23,7 +23,7 @@ import type { LocalPhoto } from '../types';
 
 export default function PropertyDetailScreen({ route, navigation }: PropertyDetailScreenProps) {
   const { id } = route.params;
-  const { properties, deleteProperty, addPhoto, deletePhoto } = usePropertyStore();
+  const { properties, deleteProperty, addPhoto, deletePhoto, checklistItems } = usePropertyStore();
   const property = properties.find((p) => p.id === id);
 
   useLayoutEffect(() => {
@@ -40,6 +40,12 @@ export default function PropertyDetailScreen({ route, navigation }: PropertyDeta
       ),
     });
   }, [navigation, id, property]);
+
+  const checklist = checklistItems[id] ?? [];
+  const ratedItems = checklist.filter((i) => i.score > 0);
+  const checklistScore = ratedItems.length > 0
+    ? Math.round((ratedItems.reduce((acc, i) => acc + i.score, 0) / (ratedItems.length * 3)) * 100)
+    : null;
 
   if (!property) {
     return (
@@ -220,6 +226,21 @@ export default function PropertyDetailScreen({ route, navigation }: PropertyDeta
           </Section>
         )}
 
+        {/* ── Viewing Checklist ─────────────────────────── */}
+        <TouchableOpacity
+          style={styles.checklistBtn}
+          onPress={() => navigation.navigate('ViewingChecklist', { id })}
+        >
+          <Ionicons name="checkbox-outline" size={20} color={colors.primary} />
+          <Text style={styles.checklistLabel}>Viewing Checklist</Text>
+          {checklistScore !== null && (
+            <View style={[styles.checklistScore, { backgroundColor: checklistScoreColor(checklistScore) }]}>
+              <Text style={styles.checklistScoreText}>{checklistScore}%</Text>
+            </View>
+          )}
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* ── Delete ────────────────────────────────────── */}
         <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteProperty}>
           <Ionicons name="trash-outline" size={18} color={colors.error} />
@@ -228,6 +249,12 @@ export default function PropertyDetailScreen({ route, navigation }: PropertyDeta
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function checklistScoreColor(pct: number): string {
+  if (pct >= 70) return '#10B981';
+  if (pct >= 40) return '#F59E0B';
+  return '#EF4444';
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
@@ -396,6 +423,34 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: colors.primary,
+  },
+  checklistBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 20,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  checklistLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  checklistScore: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  checklistScoreText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   deleteBtn: {
     flexDirection: 'row',

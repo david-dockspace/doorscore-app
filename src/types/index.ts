@@ -38,6 +38,14 @@ export interface Property {
 
 export type PropertyFormData = Omit<Property, 'id' | 'photos' | 'createdAt' | 'updatedAt'>;
 
+export interface ChecklistItem {
+  id: string;
+  propertyId: string;
+  category: string;
+  label: string;
+  score: 0 | 1 | 2 | 3; // 0 = unrated
+}
+
 export interface OGData {
   address?: string;
   price?: number;

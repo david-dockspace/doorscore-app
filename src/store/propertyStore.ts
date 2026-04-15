@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { File, Directory, Paths } from 'expo-file-system';
-import type { Property, LocalPhoto, PropertyFormData } from '../types';
+import type { Property, LocalPhoto, PropertyFormData, ChecklistItem } from '../types';
+import { DEFAULT_CHECKLIST } from '../utils/defaultChecklist';
 import { generateId } from '../utils/uuid';
 import {
   dbGetAllProperties,
@@ -10,6 +11,9 @@ import {
   dbDeleteProperty,
   dbInsertPhoto,
   dbDeletePhoto,
+  dbGetChecklistItems,
+  dbInsertChecklistItems,
+  dbSetChecklistScore,
 } from '../db/database';
 
 interface PropertyStore {
@@ -28,11 +32,17 @@ interface PropertyStore {
   // Photo management
   addPhoto: (propertyId: string, sourceUri: string, caption?: string) => Promise<LocalPhoto>;
   deletePhoto: (photo: LocalPhoto) => Promise<void>;
+
+  // Checklist
+  checklistItems: Record<string, ChecklistItem[]>;
+  loadChecklist: (propertyId: string) => void;
+  setChecklistScore: (propertyId: string, itemId: string, score: 0 | 1 | 2 | 3) => void;
 }
 
 export const usePropertyStore = create<PropertyStore>((set, get) => ({
   properties: [],
   isLoading: false,
+  checklistItems: {},
 
   loadProperties() {
     set({ isLoading: true });
@@ -123,6 +133,36 @@ export const usePropertyStore = create<PropertyStore>((set, get) => ({
     }));
 
     return photo;
+  },
+
+  loadChecklist(propertyId) {
+    let items = dbGetChecklistItems(propertyId);
+    if (items.length === 0) {
+      // First time — seed from defaults
+      items = DEFAULT_CHECKLIST.map((d) => ({
+        id: generateId(),
+        propertyId,
+        category: d.category,
+        label: d.label,
+        score: 0 as const,
+      }));
+      dbInsertChecklistItems(items);
+    }
+    set((state) => ({
+      checklistItems: { ...state.checklistItems, [propertyId]: items },
+    }));
+  },
+
+  setChecklistScore(propertyId, itemId, score) {
+    dbSetChecklistScore(itemId, score);
+    set((state) => ({
+      checklistItems: {
+        ...state.checklistItems,
+        [propertyId]: (state.checklistItems[propertyId] ?? []).map((item) =>
+          item.id === itemId ? { ...item, score } : item
+        ),
+      },
+    }));
   },
 
   async deletePhoto(photo) {

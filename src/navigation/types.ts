@@ -8,6 +8,7 @@ export type PropertiesStackParamList = {
   PropertyDetail: { id: string };
   EditProperty: { id: string };
   PhotoGallery: { id: string; initialIndex?: number };
+  ViewingChecklist: { id: string };
 };
 
 // ─── Compare tab ─────────────────────────────────────────────────────────────
@@ -27,4 +28,5 @@ export type AddPropertyScreenProps = NativeStackScreenProps<PropertiesStackParam
 export type PropertyDetailScreenProps = NativeStackScreenProps<PropertiesStackParamList, 'PropertyDetail'>;
 export type EditPropertyScreenProps = NativeStackScreenProps<PropertiesStackParamList, 'EditProperty'>;
 export type PhotoGalleryScreenProps = NativeStackScreenProps<PropertiesStackParamList, 'PhotoGallery'>;
+export type ViewingChecklistScreenProps = NativeStackScreenProps<PropertiesStackParamList, 'ViewingChecklist'>;
 export type CompareScreenProps = NativeStackScreenProps<CompareStackParamList, 'Compare'>;

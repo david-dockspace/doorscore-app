@@ -11,6 +11,7 @@ import PropertyDetailScreen from '../screens/PropertyDetailScreen';
 import EditPropertyScreen from '../screens/EditPropertyScreen';
 import PhotoGalleryScreen from '../screens/PhotoGalleryScreen';
 import CompareScreen from '../screens/CompareScreen';
+import ViewingChecklistScreen from '../screens/ViewingChecklistScreen';
 
 import type { PropertiesStackParamList, CompareStackParamList, RootTabParamList } from './types';
 
@@ -52,6 +53,11 @@ function PropertiesNavigator() {
         name="PhotoGallery"
         component={PhotoGalleryScreen}
         options={{ title: 'Photos', presentation: 'fullScreenModal' }}
+      />
+      <PropertiesStack.Screen
+        name="ViewingChecklist"
+        component={ViewingChecklistScreen}
+        options={{ title: 'Viewing Checklist' }}
       />
     </PropertiesStack.Navigator>
   );
